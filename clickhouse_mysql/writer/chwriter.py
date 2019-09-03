@@ -4,6 +4,7 @@
 import logging
 import sys
 import traceback
+from datetime import datetime
 
 from decimal import Decimal
 
@@ -40,7 +41,7 @@ class CHWriter(Writer):
         self.dst_table = dst_table
         self.dst_distribute = dst_distribute
 
-    def insert(self, event_or_events=None):
+    def insert(self, event_or_events=None,fs = {}):
         # event_or_events = [
         #   event: {
         #       row: {'id': 3, 'a': 3}
@@ -69,11 +70,29 @@ class CHWriter(Writer):
                 continue # for event
 
             event_converted = self.convert(event)
+            dt = datetime.strptime('2038-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
+            dm = datetime.strptime('1970-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
             for row in event_converted:
                 for key in row.keys():
                     # we need to convert Decimal value to str value for suitable for table structure
                     if (type(row[key]) == Decimal):
                         row[key] = str(row[key])
+
+                    if key in fs:
+                        if "datetime" in fs[key]["type"] and row[key] is not None :
+                            if row[key] > dt or row[key] < dm:
+                                logging.debug("datetime rewriting: %s %s",key,row[key])
+                                if bool(fs[key]["null"]):
+                                    row[key] = None
+                                else:
+                                    row[key] = datetime.strptime('1970-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
+                                logging.debug("datetime rewrite to: %s %s",key,row[key])
+                        if row[key] is None:
+                            if "datetime" in fs[key]["type"] and (key == "created_at" or key == "updated_at"):
+                                row[key] = datetime.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                            if "int" in fs[key]["type"] and ("_id" in key):
+                                row[key] = 0
+
                 rows.append(row)
 
         logging.debug('class:%s insert %d row(s)', __class__, len(rows))
@@ -88,7 +107,7 @@ class CHWriter(Writer):
             # if current is going to insert distributed table,we need '_all' suffix
             table = event_converted.schema + "__" + event_converted.table + "_all"
         else:
-            table = event_converted.schema + "__" + event_converted.table
+            table = event_converted.table
         logging.debug("schema={} table={} self.dst_schema={} self.dst_table={}".format(schema, table, self.dst_schema, self.dst_table))
 
         # and INSERT converted rows

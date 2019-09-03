@@ -151,7 +151,7 @@ class TableProcessor(object):
             if distribute:
                 schema += "_all"
                 table += "_all"
-            return '`{0}`.`{1}`'.format(schema, db+"__"+table) if db else '`{0}`'.format(table)
+            return '`{0}`.`{1}`'.format(schema, table) if db else '`{0}`'.format(table)
         else:
             return '`{0}`.`{1}`'.format(db, table) if db else '`{0}`'.format(table)
 

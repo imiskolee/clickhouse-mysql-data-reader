@@ -74,7 +74,11 @@ class TableSQLBuilder(TableProcessor):
         sql = """CREATE TABLE IF NOT EXISTS {} {} (
     {}
 ) 
-ENGINE = MergeTree(<PRIMARY_DATE_FIELD>, (<COMMA_SEPARATED_INDEX_FIELDS_LIST>), 8192)
+ENGINE = ReplacingMergeTree(updated_at)
+PARTITION BY toYYYYMM(updated_at)
+PRIMARY KEY id
+ORDER BY id
+
 """.format(
             self.create_full_table_name(schema=schema, db=db, table=table),
             "on cluster {}".format(cluster) if cluster != None else "",
@@ -261,11 +265,11 @@ ENGINE = MergeTree(<PRIMARY_DATE_FIELD>, (<COMMA_SEPARATED_INDEX_FIELDS_LIST>), 
             ch_type = 'UInt64' if mysql_type.endswith('UNSIGNED') else 'Int64'
         elif mysql_type.startswith('SERIAL'):
             ch_type = 'UInt64'
-        elif mysql_type.startswith('DECIMAL') or mysql_type.startswith('DEC') or mysql_type.startswith('FIXED') or mysql_type.startswith('NUMERIC'):
+        elif  mysql_type.startswith('DEC') or mysql_type.startswith('FIXED') or mysql_type.startswith('NUMERIC'):
             ch_type = 'String'
         elif mysql_type.startswith('FLOAT'):
             ch_type = 'Float32'
-        elif mysql_type.startswith('DOUBLE') or mysql_type.startswith('REAL'):
+        elif mysql_type.startswith('DECIMAL') or mysql_type.startswith('DOUBLE') or mysql_type.startswith('REAL'):
             ch_type = 'Float64'
 
         # Date and Time Types

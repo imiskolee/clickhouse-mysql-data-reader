@@ -172,6 +172,23 @@ class TableMigrator(TableSQLBuilder):
                 logging.info("Start migration {}.{}".format(db, table))
                 self.migrate_one_table_data(db=db, table=table)
 
+    def get_checkpoints(self,db=None,table=None):
+        try:
+            dir = "/tmp/checkpoints/{}.{}.checkpoint".format(db,table)
+            f = open(dir,"r")
+            last_id = int(f.read())
+            f.close()
+            return last_id
+        except Exception as e:
+            logging.info("can't get checkpoint: {}.{}".format(db,table))
+            return 0
+
+    def save_last_checkpoint(self,db=None,table=None,last_id = 0):
+        dir = "/tmp/checkpoints/{}.{}.checkpoint".format(db,table)
+        f = open(dir,"w+")
+        f.write("{}".format(last_id))
+        f.close()
+
     def migrate_one_table_data(self, db=None, table=None):
         """
         Migrate one table
@@ -183,11 +200,19 @@ class TableMigrator(TableSQLBuilder):
 
         # build SQL statement
         full_table_name = self.create_full_table_name(db=db, table=table)
-        sql = "SELECT {0} FROM {1}".format(",".join(self.get_columns(db, full_table_name)), full_table_name)
+        ret  = self.get_columns(db, full_table_name)
+        fs = ret[0]
+        columns = ret[1]
+        logging.info("fs:{}".format(fs))
+
+        last_id = self.get_checkpoints(db,table)
+
+        sql = "SELECT {0} FROM {1}".format(",".join(columns), full_table_name)
         # in case we have WHERE clause for this db.table - add it to SQL
         if db in self.where_clauses and table in self.where_clauses[db]:
             sql += " WHERE {}".format(self.where_clauses[db][table])
-
+        if int(last_id) > 0:
+            sql += " WHERE id > {}".format(last_id)
         try:
             logging.info("migrate_table. sql={}".format(sql))
             self.client.cursorclass = SSDictCursor
@@ -205,9 +230,11 @@ class TableMigrator(TableSQLBuilder):
                 event.schema = db
                 event.table = table
                 event.rows = rows
-                self.chwriter.insert(event)
+                self.chwriter.insert(event,fs)
                 self.chwriter.flush()
-
+                last_row = rows[len(rows) - 1]
+                if "id" in last_row:
+                    self.save_last_checkpoint(db,table,last_row["id"])
                 cnt += len(rows)
         except Exception as ex:
             logging.critical("Critical error: {}".format(str(ex)))
@@ -223,12 +250,19 @@ class TableMigrator(TableSQLBuilder):
         self.client.connect(db=db)
         self.client.cursor.execute("DESC {}".format(full_table_name))
         fields = []
+        fs = {}
         for (_field, _type, _null, _key, _default, _extra,) in self.client.cursor:
             if self.column_skip.__contains__(_field):
                 logging.debug("skip column %s",_field)
                 continue
-            fields.append(_field)
-        return fields
+            fields.append("`" +_field + "`")
+            fs[_field] = {
+                "field" : _field,
+                "type" : _type,
+                "null" : _null,
+                "default" : _default,
+            }
+        return [fs,fields]
 
 if __name__ == '__main__':
     tb = TableBuilder(
