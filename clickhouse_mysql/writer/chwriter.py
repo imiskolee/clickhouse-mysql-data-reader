@@ -3,6 +3,7 @@
 
 import logging
 import sys
+import traceback
 
 from decimal import Decimal
 
@@ -104,6 +105,10 @@ class CHWriter(Writer):
             logging.critical('QUERY FAILED')
             logging.critical('ex={}'.format(ex))
             logging.critical('sql={}'.format(sql))
+            logging.debug('=============')
+            traceback.print_exc()
+            logging.debug('=============')
+            print(ex)
             sys.exit(0)
 
         # all DONE
