@@ -75,7 +75,7 @@ class CHWriter(Writer):
             for row in event_converted:
                 for key in row.keys():
                     # we need to convert Decimal value to str value for suitable for table structure
-                    if (type(row[key]) == Decimal):
+                  #  if (type(row[key]) == Decimal):
                      #   row[key] = str(row[key])
 
                     if key in fs:
