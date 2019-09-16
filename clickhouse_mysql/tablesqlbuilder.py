@@ -265,12 +265,12 @@ ORDER BY id
             ch_type = 'UInt64' if mysql_type.endswith('UNSIGNED') else 'Int64'
         elif mysql_type.startswith('SERIAL'):
             ch_type = 'UInt64'
-        elif  mysql_type.startswith('DEC') or mysql_type.startswith('FIXED') or mysql_type.startswith('NUMERIC'):
-            ch_type = 'String'
         elif mysql_type.startswith('FLOAT'):
             ch_type = 'Float64'
         elif mysql_type.startswith('DECIMAL') or mysql_type.startswith('DOUBLE') or mysql_type.startswith('REAL'):
             ch_type = 'Float64'
+        elif  mysql_type.startswith('DEC') or mysql_type.startswith('FIXED') or mysql_type.startswith('NUMERIC'):
+            ch_type = 'String'
 
         # Date and Time Types
         elif mysql_type.startswith('DATETIME'):
