@@ -76,7 +76,7 @@ class CHWriter(Writer):
                 for key in row.keys():
                     # we need to convert Decimal value to str value for suitable for table structure
                     if (type(row[key]) == Decimal):
-                        row[key] = str(row[key])
+                     #   row[key] = str(row[key])
 
                     if key in fs:
                         if "datetime" in fs[key]["type"] and row[key] is not None :
