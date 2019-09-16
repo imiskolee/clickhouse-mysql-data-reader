@@ -323,8 +323,6 @@ ORDER BY id
         else:
             ch_type = 'UNKNOWN'
 
-        logging.debug("table map_type %s to %s",mysql_type,ch_type)
-
         return ch_type
 
     def map_type_nullable(self, mysql_type, nullable=False):
