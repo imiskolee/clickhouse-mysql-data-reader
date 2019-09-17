@@ -18,6 +18,8 @@ class Reader(Observable):
 
         # called when Reader has no data to read
         'ReaderIdleEvent': [],
+        'UpdateRowsEvent' : [],
+        'UpdateRowsEvent.EachRow' : [],
     }
 
     def __init__(self, converter=None, callbacks={}):

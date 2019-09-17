@@ -19,6 +19,9 @@ class Event(object):
     # [{'id': 1, 'col1':1}, {'id': 2, 'col1': 2}, {'id': 3, 'col1': 3}]
     rows = None
 
+    before_row = None
+
+
     # additional meta-information
     # source-dependent
 

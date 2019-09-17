@@ -4,7 +4,7 @@
 import time
 import logging
 import sys
-
+import traceback
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
 
@@ -294,7 +294,56 @@ class MySQLReader(Reader):
         self.stat_write_rows_event_finalyse()
 
     def process_update_rows_event(self, mysql_event):
-        logging.info("Skip update rows")
+        if self.tables_prefixes:
+            # we have prefixes specified
+            # need to find whether current event is produced by table in 'looking-into-tables' list
+            if not self.is_table_listened(mysql_event.table):
+                # this table is not listened
+                # processing is over - just skip event
+                return
+        for row in mysql_event.rows:
+            row["values"] = row["after_values"]
+        # statistics
+        self.stat_write_rows_event_calc_rows_num_min_max(rows_num_per_event=len(mysql_event.rows))
+
+        if self.subscribers('UpdateRowsEvent'):
+            logging.debug("start update")
+        # dispatch event to subscribers
+
+        # statistics
+            self.stat_write_rows_event_all_rows(mysql_event=mysql_event)
+
+        # dispatch Event
+            event = Event()
+            event.schema = mysql_event.schema
+            event.table = mysql_event.table
+            event.pymysqlreplication_event = mysql_event
+
+            self.process_first_event(event=event)
+            self.notify('UpdateRowsEvent', event=event)
+
+        if self.subscribers('UpdateRowsEvent.EachRow'):
+            # dispatch event to subscribers
+
+            # statistics
+            self.stat_write_rows_event_each_row()
+
+            # dispatch Event per each row
+            for row in mysql_event.rows:
+                # statistics
+                self.stat_write_rows_event_each_row_for_each_row()
+                # dispatch Event
+                event = Event()
+                event.schema = mysql_event.schema
+                event.table = mysql_event.table
+                event.row = row['values']
+                event.before_row = row["before_values"]
+                self.process_first_event(event=event)
+                self.notify('UpdateRowsEvent.EachRow', event=event)
+
+        self.stat_write_rows_event_finalyse()
+
+
 
     def process_delete_rows_event(self, mysql_event):
         logging.info("Skip delete rows")
@@ -350,10 +399,13 @@ class MySQLReader(Reader):
                         # report and continue cycle
                         logging.warning("Got an exception, skip it in blocking mode")
                         logging.warning(ex)
+                        traceback.print_exc(file=sys.stdout)
+
                     else:
                         # do not continue, report error and exit
                         logging.critical("Got an exception, abort it in non-blocking mode")
                         logging.critical(ex)
+                        traceback.print_exc(file=sys.stdout)
                         sys.exit(1)
 
                 # all events fetched (or none of them available)

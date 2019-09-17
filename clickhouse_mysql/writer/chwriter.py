@@ -41,6 +41,95 @@ class CHWriter(Writer):
         self.dst_table = dst_table
         self.dst_distribute = dst_distribute
 
+    def update(self,event_or_events=None,fs = {}):
+        logging.debug("values :{}".format(event_or_events))
+        events = self.listify(event_or_events)
+        if len(events) < 1:
+            logging.warning('No events to update. class: %s', __class__)
+            return
+
+        logging.debug('class:%s update %d event(s)', __class__, len(events))
+
+        for event in events:
+            if not event.verify:
+                logging.warning('Event verification failed. Skip one event. Event: %s Class: %s', event.meta(), __class__)
+                continue # for event
+            event_converted = self.convert(event)
+            for row in event_converted:
+                updated = {}
+                values = []
+                for key in row.keys():
+                    #skip field no changes
+                    if event.row[key] is None and event.before_row[key] is None:
+                        continue
+                    if event.row[key] == event.before_row[key]:
+                        continue
+                    updated[key] = row[key]
+
+                wheres = []
+                where_values = {}
+                for key in event.before_row:
+                    if event.before_row[key] is None:
+                        wheres.append("`{}` is NULL".format(key))
+                    else:
+                        wheres.append("`{}` = %({})s".format(key,"_w_" + key))
+                        where_values["_w_" + key] = event.before_row[key]
+
+                updates = []
+                updates_values = {}
+                for key in updated:
+                    updates.append("`{}` = %({})s".format(key,"_u_" + key))
+                    updates_values["_u_" + key] = updated[key]
+
+                update_sql = ",".join(updates)
+
+                where_sql = " AND ".join(wheres)
+
+                merged_values = where_values
+                merged_values.update(updates_values)
+
+                schema = self.dst_schema if self.dst_schema else event_converted.schema
+                table = None
+                if self.dst_table:
+                    table = self.dst_table
+                elif self.dst_distribute:
+                    # if current is going to insert distributed table,we need '_all' suffix
+                    table = event_converted.schema + "__" + event_converted.table + "_all"
+                else:
+                    table = event_converted.table
+
+                try:
+                    sql = "ALTER TABLE `{}`.`{}` UPDATE {} WHERE {}".format(schema,table,update_sql,where_sql)
+                    self.client.execute(sql, merged_values)
+                except Exception as ex:
+                    if "Cannot UPDATE key column" in "{}".format(ex):
+                        self.insert(event_or_events,fs)
+                        return
+                    logging.critical('QUERY FAILED')
+                    logging.critical('ex={}'.format(ex))
+                    logging.critical('sql={}'.format(sql))
+                    logging.debug('=============')
+                    traceback.print_exc()
+                    logging.debug('=============')
+                    sys.exit(0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def insert(self, event_or_events=None,fs = {}):
         # event_or_events = [
         #   event: {
@@ -113,6 +202,9 @@ class CHWriter(Writer):
         # and INSERT converted rows
 
         sql = ''
+
+
+
         try:
             sql = 'INSERT INTO `{0}`.`{1}` ({2}) VALUES'.format(
                 schema,

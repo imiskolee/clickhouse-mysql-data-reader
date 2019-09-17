@@ -15,7 +15,6 @@ class Observable(object):
 
     def subscribe(self, event_handlers):
         # event_handlers has the same structure as self.event_handlers
-
         for event_name in event_handlers:
             if event_name in self.event_handlers:
                 # this event is listed in Observable as 'subscribable'
@@ -28,7 +27,6 @@ class Observable(object):
                         for callback in event_handlers[event_name]:
                             if callable(callback):
                                 self.event_handlers[event_name].append(callback)
-
     def notify(self, event_name, **attrs):
         # notify (call function) each of subscribers of event_name event
         for callback in self.event_handlers[event_name]:

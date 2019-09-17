@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-
 class Pumper(object):
     """
     Pump data - read data from reader and push into writer
@@ -22,6 +21,8 @@ class Pumper(object):
                 'WriteRowsEvent': self.write_rows_event,
 #                'WriteRowsEvent.EachRow': self.write_rows_event_each_row,
                 'ReaderIdleEvent': self.reader_idle_event,
+              #  'UpdateRowsEvent' : self.write_rows_event,
+                'UpdateRowsEvent.EachRow': self.update_rows_event,
             })
 
     def run(self):
@@ -33,6 +34,13 @@ class Pumper(object):
         :param event:
         """
         self.writer.insert(event)
+
+    def update_rows_event(self, event=None):
+        """
+        WriteRowsEvent handler
+        :param event:
+        """
+        self.writer.update(event)
 
     def write_rows_event_each_row(self, event=None):
         """
