@@ -4,7 +4,6 @@
 import time
 import logging
 import sys
-from time import time
 import traceback
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
@@ -262,7 +261,7 @@ class MySQLReader(Reader):
         fs = {}
         has_cache = False
         if cache_key in table_schema_cache_time:
-            if time() - table_schema_cache_time[cache_key] > 3600 * 6:
+            if time.time() - table_schema_cache_time[cache_key] > 3600 * 6:
                 has_cache = False
             else:
                 has_cache = True
@@ -271,7 +270,7 @@ class MySQLReader(Reader):
             logging.debug("start reflash table:" + cache_key)
             ret = self.get_columns(mysql_event.schema,mysql_event.table)
             fs = ret[0]
-            table_schema_cache_time[cache_key] = time()
+            table_schema_cache_time[cache_key] = time.time()
             table_schema_cache[cache_key] = fs
         else:
             fs = table_schema_cache[cache_key]
