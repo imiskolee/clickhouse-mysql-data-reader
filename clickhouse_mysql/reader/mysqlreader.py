@@ -4,16 +4,20 @@
 import time
 import logging
 import sys
+from time import time
 import traceback
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
-
+from MySQLdb.cursors import SSDictCursor,Cursor
 from clickhouse_mysql.reader.reader import Reader
 from clickhouse_mysql.event.event import Event
 from clickhouse_mysql.tableprocessor import TableProcessor
 from clickhouse_mysql.util import Util
+from clickhouse_mysql.dbclient.mysqlclient import MySQLClient
 #from pymysqlreplication.event import QueryEvent, RotateEvent, FormatDescriptionEvent
 
+table_schema_cache = {}
+table_schema_cache_time = {}
 
 class MySQLReader(Reader):
     """Read data from MySQL as replication ls"""
@@ -253,6 +257,25 @@ class MySQLReader(Reader):
                 # processing is over - just skip event
                 return
 
+        cache_key = mysql_event.schema + '_' + mysql_event.table
+
+        fs = {}
+        has_cache = False
+        if cache_key in table_schema_cache_time:
+            if time() - table_schema_cache_time[cache_key] > 3600 * 6:
+                has_cache = False
+            else:
+                has_cache = True
+
+        if not has_cache:
+            logging.debug("start reflash table:" + cache_key)
+            ret = self.get_columns(mysql_event.schema,mysql_event.table)
+            fs = ret[0]
+            table_schema_cache_time[cache_key] = time()
+            table_schema_cache[cache_key] = fs
+        else:
+            fs = table_schema_cache[cache_key]
+
         # statistics
         self.stat_write_rows_event_calc_rows_num_min_max(rows_num_per_event=len(mysql_event.rows))
 
@@ -267,6 +290,7 @@ class MySQLReader(Reader):
             event.schema = mysql_event.schema
             event.table = mysql_event.table
             event.pymysqlreplication_event = mysql_event
+            event.fs = fs
 
             self.process_first_event(event=event)
             self.notify('WriteRowsEvent', event=event)
@@ -441,6 +465,24 @@ class MySQLReader(Reader):
         logging.info('end %d', end_timestamp)
         logging.info('len %d', end_timestamp - self.start_timestamp)
 
+
+    def get_columns(self,db,full_table_name):
+        client = MySQLClient(self.connection_settings)
+        client.cursorclass = Cursor
+        client.connect(db=db)
+        client.cursor.execute("DESC {}".format(full_table_name))
+        fields = []
+        fs = {}
+        for (_field, _type, _null, _key, _default, _extra,) in self.client.cursor:
+            fields.append("`" +_field + "`")
+            fs[_field] = {
+                "field" : _field,
+                "type" : _type,
+                "null" : _null,
+                "default" : _default,
+            }
+        client.close()
+        return [fs,fields]
 if __name__ == '__main__':
     connection_settings = {
         'host': '127.0.0.1',

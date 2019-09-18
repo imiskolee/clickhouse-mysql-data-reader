@@ -14,7 +14,6 @@ from clickhouse_mysql.dbclient.chclient import CHClient
 from clickhouse_mysql.writer.writer import Writer
 from clickhouse_mysql.event.event import Event
 
-
 class CHWriter(Writer):
     """ClickHouse writer"""
 
@@ -41,6 +40,9 @@ class CHWriter(Writer):
         self.dst_schema = dst_schema
         self.dst_table = dst_table
         self.dst_distribute = dst_distribute
+
+
+
 
     def update(self,event_or_events=None,fs = {}):
         logging.debug("values :{}".format(event_or_events))
@@ -114,23 +116,6 @@ class CHWriter(Writer):
                     logging.debug('=============')
                     sys.exit(0)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def insert(self, event_or_events=None,fs = {}):
         # event_or_events = [
         #   event: {
@@ -155,6 +140,7 @@ class CHWriter(Writer):
         rows = []
         event_converted = None
         for event in events:
+
             if not event.verify:
                 logging.warning('Event verification failed. Skip one event. Event: %s Class: %s', event.meta(), __class__)
                 continue # for event
@@ -180,9 +166,10 @@ class CHWriter(Writer):
                         if row[key] is None:
                             if "datetime" in fs[key]["type"] and (key == "created_at" or key == "updated_at"):
                                 row[key] = datetime.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+
                             if "int" in fs[key]["type"] and ("_id" in key):
                                 row[key] = 0
-                                
+
                     if isinstance(row[key],dict):
                         row[key] = json.dumps(row[key])
 

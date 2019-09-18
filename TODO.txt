@@ -1,2 +1,0 @@
-Row mapper/processor for each row
-

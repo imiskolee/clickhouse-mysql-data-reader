@@ -33,7 +33,7 @@ class Pumper(object):
         WriteRowsEvent handler
         :param event:
         """
-        self.writer.insert(event)
+        self.writer.insert(event,event.fs)
 
     def update_rows_event(self, event=None):
         """

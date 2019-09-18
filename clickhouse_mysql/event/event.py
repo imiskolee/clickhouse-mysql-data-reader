@@ -21,6 +21,8 @@ class Event(object):
 
     before_row = None
 
+    fs = None
+
 
     # additional meta-information
     # source-dependent
