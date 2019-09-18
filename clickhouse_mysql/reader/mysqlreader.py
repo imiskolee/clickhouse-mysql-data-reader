@@ -475,8 +475,10 @@ class MySQLReader(Reader):
 
 
     def get_columns(self,db,full_table_name):
-        logging.debug("mysql connection settings:{}".format(self.connection_settings))
-        client = MySQLClient(self.connection_settings)
+        connection_settings = self.connection_settings
+        connection_settings["password"] = connection_settings['passwd']
+        logging.debug("mysql connection settings:{}".format(connection_settings))
+        client = MySQLClient(connection_settings)
         client.cursorclass = Cursor
         client.connect(db=db)
         client.cursor.execute("DESC {}".format(full_table_name))
