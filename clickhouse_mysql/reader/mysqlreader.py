@@ -484,7 +484,7 @@ class MySQLReader(Reader):
         client.cursor.execute("DESC {}".format(full_table_name))
         fields = []
         fs = {}
-        for (_field, _type, _null, _key, _default, _extra,) in self.client.cursor:
+        for (_field, _type, _null, _key, _default, _extra,) in client.cursor:
             fields.append("`" +_field + "`")
             fs[_field] = {
                 "field" : _field,
