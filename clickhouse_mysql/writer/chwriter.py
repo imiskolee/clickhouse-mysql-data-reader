@@ -5,6 +5,7 @@ import logging
 import sys
 import traceback
 from datetime import datetime
+import json
 
 from decimal import Decimal
 
@@ -181,6 +182,10 @@ class CHWriter(Writer):
                                 row[key] = datetime.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
                             if "int" in fs[key]["type"] and ("_id" in key):
                                 row[key] = 0
+                                
+                    if isinstance(row[key],dict):
+                        row[key] = json.dumps(row[key])
+
 
                 rows.append(row)
 
