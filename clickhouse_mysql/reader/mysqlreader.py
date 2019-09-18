@@ -243,6 +243,27 @@ class MySQLReader(Reader):
             self.first_rows_passed.append("{}.{}".format(event.schema, event.table))
         logging.info(self.first_rows_passed)
 
+    def get_field_schema_cache(self,db,table):
+        cache_key = db + '_' + table
+
+        fs = {}
+        has_cache = False
+        if cache_key in table_schema_cache_time:
+            if time.time() - table_schema_cache_time[cache_key] > 3600 * 6:
+                has_cache = False
+            else:
+                has_cache = True
+
+        if not has_cache:
+            logging.debug("start reflash table:" + cache_key)
+            ret = self.get_columns(db,table)
+            fs = ret[0]
+            table_schema_cache_time[cache_key] = time.time()
+            table_schema_cache[cache_key] = fs
+        else:
+            fs = table_schema_cache[cache_key]
+        return fs
+
     def process_write_rows_event(self, mysql_event):
         """
         Process specific MySQL event - WriteRowsEvent
@@ -257,24 +278,7 @@ class MySQLReader(Reader):
                 # processing is over - just skip event
                 return
 
-        cache_key = mysql_event.schema + '_' + mysql_event.table
-
-        fs = {}
-        has_cache = False
-        if cache_key in table_schema_cache_time:
-            if time.time() - table_schema_cache_time[cache_key] > 3600 * 6:
-                has_cache = False
-            else:
-                has_cache = True
-
-        if not has_cache:
-            logging.debug("start reflash table:" + cache_key)
-            ret = self.get_columns(mysql_event.schema,mysql_event.table)
-            fs = ret[0]
-            table_schema_cache_time[cache_key] = time.time()
-            table_schema_cache[cache_key] = fs
-        else:
-            fs = table_schema_cache[cache_key]
+        fs = self.get_field_schema_cache(mysql_event.schema,mysql_event.table)
 
         # statistics
         self.stat_write_rows_event_calc_rows_num_min_max(rows_num_per_event=len(mysql_event.rows))
@@ -342,6 +346,7 @@ class MySQLReader(Reader):
             event.schema = mysql_event.schema
             event.table = mysql_event.table
             event.pymysqlreplication_event = mysql_event
+            event.fs = self.get_field_schema_cache(mysql_event.schema,mysql_event.table)
 
             self.process_first_event(event=event)
             self.notify('UpdateRowsEvent', event=event)
