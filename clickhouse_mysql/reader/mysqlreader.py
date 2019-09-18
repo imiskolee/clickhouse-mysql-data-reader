@@ -315,7 +315,7 @@ class MySQLReader(Reader):
                 event.schema = mysql_event.schema
                 event.table = mysql_event.table
                 event.row = row['values']
-
+                event.fs = fs
                 self.process_first_event(event=event)
                 self.notify('WriteRowsEvent.EachRow', event=event)
 
@@ -334,6 +334,8 @@ class MySQLReader(Reader):
         # statistics
         self.stat_write_rows_event_calc_rows_num_min_max(rows_num_per_event=len(mysql_event.rows))
 
+        fs = self.get_field_schema_cache(mysql_event.schema,mysql_event.table)
+
         if self.subscribers('UpdateRowsEvent'):
             logging.debug("start update")
         # dispatch event to subscribers
@@ -346,7 +348,7 @@ class MySQLReader(Reader):
             event.schema = mysql_event.schema
             event.table = mysql_event.table
             event.pymysqlreplication_event = mysql_event
-            event.fs = self.get_field_schema_cache(mysql_event.schema,mysql_event.table)
+            event.fs = fs
 
             self.process_first_event(event=event)
             self.notify('UpdateRowsEvent', event=event)
@@ -367,6 +369,7 @@ class MySQLReader(Reader):
                 event.table = mysql_event.table
                 event.row = row['values']
                 event.before_row = row["before_values"]
+                event.fs = fs
                 self.process_first_event(event=event)
                 self.notify('UpdateRowsEvent.EachRow', event=event)
 
