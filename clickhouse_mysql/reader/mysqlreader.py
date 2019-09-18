@@ -129,6 +129,7 @@ class MySQLReader(Reader):
             blocking=False,
             resume_stream=self.resume_stream,
         )
+        logging.debug("mysql connection settings:{}".format(self.connection_settings))
 
     def performance_report(self, start, rows_num, rows_num_per_event_min=None, rows_num_per_event_max=None, now=None):
         # log performance report
@@ -466,6 +467,7 @@ class MySQLReader(Reader):
 
 
     def get_columns(self,db,full_table_name):
+        logging.debug("mysql connection settings:{}".format(self.connection_settings))
         client = MySQLClient(self.connection_settings)
         client.cursorclass = Cursor
         client.connect(db=db)
