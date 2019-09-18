@@ -22,7 +22,7 @@ class Pumper(object):
 #                'WriteRowsEvent.EachRow': self.write_rows_event_each_row,
                 'ReaderIdleEvent': self.reader_idle_event,
               #  'UpdateRowsEvent' : self.write_rows_event,
-                'UpdateRowsEvent.EachRow': self.update_rows_event,
+                'UpdateRowsEvent.EachRow': self.write_rows_event,
             })
 
     def run(self):
