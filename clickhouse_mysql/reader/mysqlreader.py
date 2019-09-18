@@ -492,7 +492,7 @@ class MySQLReader(Reader):
                 "null" : _null,
                 "default" : _default,
             }
-        client.close()
+        client.disconnect()
         return [fs,fields]
 if __name__ == '__main__':
     connection_settings = {
