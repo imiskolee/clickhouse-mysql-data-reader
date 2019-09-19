@@ -75,6 +75,7 @@ class EventCache():
             self.flush(event)
 
     def flush(self,event):
+        logging.info("start flush schema:{} table:{} rows:{}",self.schema,self.table,len(self.events))
         batch_event = FakeRows()
         batch_event.rows = self.events
         event = Event()
@@ -86,7 +87,7 @@ class EventCache():
         self.reader.notify('WriteRowsEvent', event=event)
         self.events = []
         self.last_flush_time = time.time()
-
+        
         self.reader.process_binlog_position(self.last_binlog_file_name,self.last_binlog_file_pos)
 
 
