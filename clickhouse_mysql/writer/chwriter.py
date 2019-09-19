@@ -173,6 +173,9 @@ class CHWriter(Writer):
                     if isinstance(row[key],dict):
                         row[key] = json.dumps(row[key])
 
+                    logging.debug("row key {},type {}, value {}".format(key,type(row[key]),row[key]))
+
+
 
                 rows.append(row)
 

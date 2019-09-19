@@ -432,6 +432,7 @@ class MySQLReader(Reader):
                         logging.warning("Got an exception, skip it in blocking mode")
                         logging.warning(ex)
                         traceback.print_exc(file=sys.stdout)
+                        sys.exit(1)
 
                     else:
                         # do not continue, report error and exit
