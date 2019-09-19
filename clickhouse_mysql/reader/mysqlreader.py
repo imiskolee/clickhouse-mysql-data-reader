@@ -18,7 +18,7 @@ from clickhouse_mysql.dbclient.mysqlclient import MySQLClient
 table_schema_cache = {}
 table_schema_cache_time = {}
 
-last_binlog_pos = ''
+last_binlog_pos = None
 last_flush_time = 0
 
 class FakeRows:
