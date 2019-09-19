@@ -480,13 +480,13 @@ class MySQLReader(Reader):
         if last_binlog_pos is None:
             last_binlog_pos = new_binlog_pos
         else:
-            if new_binlog_pos < last_binlog_pos:
+            if new_binlog_pos > last_binlog_pos:
                 last_binlog_pos = new_binlog_pos
             else:
                 logging.info("skip process binlog position: stored: {},new: {}".format(last_binlog_pos,new_binlog_pos))
                 return
         now = time.time()
-        if self.binlog_position_file and now - last_flush_time > 10:
+        if self.binlog_position_file and now - last_flush_time > 120:
             with open(self.binlog_position_file, "w") as f:
                 f.write(last_binlog_pos)
                 last_flush_time = now
