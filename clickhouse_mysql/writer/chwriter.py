@@ -172,7 +172,8 @@ class CHWriter(Writer):
                                 row[key] = 0
 
                     if isinstance(row[key],dict):
-                        row[key] = json.dumps(row[key])
+                        row[key] = json.dumps(clear_json(row[key]))
+
 
                     if isinstance(row[key],timedelta):
                         row[key] = str(row[key])
@@ -220,6 +221,18 @@ class CHWriter(Writer):
         # all DONE
 
 
+def clear_json(mydict):
+    for key in mydict.keys():
+        if type(key) is not str:
+            try:
+                mydict[str(key)] = mydict[key]
+            except:
+                try:
+                    mydict[repr(key)] = mydict[key]
+                except:
+                    pass
+            del mydict[key]
+    return mydict
 
 if __name__ == '__main__':
     connection_settings = {
