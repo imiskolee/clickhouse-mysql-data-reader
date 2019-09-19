@@ -176,11 +176,7 @@ class CHWriter(Writer):
 
                     if isinstance(row[key],timedelta):
                         row[key] = str(row[key])
-
-                    logging.debug("row key {},type {}, value {}".format(key,type(row[key]),row[key]))
-
-
-
+                        
                 rows.append(row)
 
         logging.debug('class:%s insert %d row(s)', __class__, len(rows))
