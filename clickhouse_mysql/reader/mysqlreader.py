@@ -87,7 +87,6 @@ class EventCache():
         self.reader.notify('WriteRowsEvent', event=event)
         self.events = []
         self.last_flush_time = time.time()
-        
         self.reader.process_binlog_position(self.last_binlog_file_name,self.last_binlog_file_pos)
 
 
@@ -478,7 +477,7 @@ class MySQLReader(Reader):
         global last_flush_time
         new_binlog_pos = "{}:{}".format(file, pos)
         logging.info("start process binlog position:{}".format(new_binlog_pos))
-        if last_binlog_pos is None:
+        if last_binlog_pos is None or file > last_binlog_pos:
             last_binlog_pos = new_binlog_pos
         else:
             if new_binlog_pos > last_binlog_pos:
