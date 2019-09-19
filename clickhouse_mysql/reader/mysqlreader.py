@@ -18,6 +18,10 @@ from clickhouse_mysql.dbclient.mysqlclient import MySQLClient
 table_schema_cache = {}
 table_schema_cache_time = {}
 
+last_binlog_pos = ''
+last_flush_time = 0
+
+
 class MySQLReader(Reader):
     """Read data from MySQL as replication ls"""
 
@@ -244,6 +248,8 @@ class MySQLReader(Reader):
         logging.info(self.first_rows_passed)
 
     def get_field_schema_cache(self,db,table):
+        global table_schema_cache_time
+        global table_schema_cache
         cache_key = db + '_' + table
 
         fs = {}
@@ -381,9 +387,14 @@ class MySQLReader(Reader):
         logging.info("Skip delete rows")
 
     def process_binlog_position(self, file, pos):
-        if self.binlog_position_file:
+        global last_binlog_pos
+        global last_flush_time
+        last_binlog_pos = "{}:{}".format(file, pos)
+        now = time.time()
+        if self.binlog_position_file and now - last_flush_time > 10:
             with open(self.binlog_position_file, "w") as f:
-                f.write("{}:{}".format(file, pos))
+                f.write(last_binlog_pos)
+                last_flush_time = now
         logging.debug("Next event binlog pos: {}.{}".format(file, pos))
 
     def read(self):
