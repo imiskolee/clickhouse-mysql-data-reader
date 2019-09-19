@@ -172,7 +172,7 @@ class CHWriter(Writer):
                                 row[key] = 0
 
                     if isinstance(row[key],dict):
-                        row[key] = json.dumps(decode_dict(row[key]))
+                        row[key] = json.dumps(convert(row[key]))
 
 
                     if isinstance(row[key],timedelta):
@@ -221,17 +221,13 @@ class CHWriter(Writer):
         # all DONE
 
 
-def decode_dict(d):
-    result = {}
-    for key, value in d.items():
-        if isinstance(key, bytes):
-            key = key.decode()
-        if isinstance(value, bytes):
-            value = value.decode()
-        elif isinstance(value, dict):
-            value = decode_dict(value)
-        result.update({key: value})
-    return result
+def convert(data):
+    if isinstance(data, bytes):      return data.decode()
+    if isinstance(data, (str, int)): return str(data)
+    if isinstance(data, dict):       return dict(map(convert, data.items()))
+    if isinstance(data, tuple):      return tuple(map(convert, data))
+    if isinstance(data, list):       return list(map(convert, data))
+    if isinstance(data, set):        return set(map(convert, data)
 
 if __name__ == '__main__':
     connection_settings = {
