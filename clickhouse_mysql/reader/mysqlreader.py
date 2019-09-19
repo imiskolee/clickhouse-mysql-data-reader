@@ -476,6 +476,7 @@ class MySQLReader(Reader):
         global last_binlog_pos
         global last_flush_time
         new_binlog_pos = "{}:{}".format(file, pos)
+        logging.info("start process binlog position:{}".format(new_binlog_pos))
         if last_binlog_pos is None:
             last_binlog_pos = new_binlog_pos
         else:
