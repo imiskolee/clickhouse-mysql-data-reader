@@ -173,6 +173,9 @@ class CHWriter(Writer):
                     if isinstance(row[key],dict):
                         row[key] = json.dumps(row[key])
 
+                    if isinstance(row[key],datetime.timedelta):
+                        row[key] = str(row[key])
+
                     logging.debug("row key {},type {}, value {}".format(key,type(row[key]),row[key]))
 
 
