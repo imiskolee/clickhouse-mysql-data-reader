@@ -203,7 +203,6 @@ class TableMigrator(TableSQLBuilder):
         ret  = self.get_columns(db, full_table_name)
         fs = ret[0]
         columns = ret[1]
-        logging.info("fs:{}".format(fs))
 
         last_id = self.get_checkpoints(db,table)
 

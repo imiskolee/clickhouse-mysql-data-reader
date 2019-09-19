@@ -245,7 +245,7 @@ class MySQLReader(Reader):
         if "{}.{}".format(event.schema, event.table) not in self.first_rows_passed:
             Util.log_row(event.first_row(), "first row in replication {}.{}".format(event.schema, event.table))
             self.first_rows_passed.append("{}.{}".format(event.schema, event.table))
-        logging.info(self.first_rows_passed)
+     #   logging.info(self.first_rows_passed)
 
     def get_field_schema_cache(self,db,table):
         global table_schema_cache_time
