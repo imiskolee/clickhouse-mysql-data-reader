@@ -223,14 +223,8 @@ class CHWriter(Writer):
 
 def clear_json(mydict):
     for key in mydict.keys():
-        if type(key) is not str:
-            try:
-                mydict[str(key)] = mydict[key]
-            except:
-                try:
-                    mydict[repr(key)] = mydict[key]
-                except:
-                    pass
+        if isinstance(key,bytes):
+            mydict[key.decode('utf-8')] = mydict[key]
             del mydict[key]
     return mydict
 
