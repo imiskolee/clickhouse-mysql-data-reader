@@ -69,11 +69,10 @@ class EventCache():
 
         self.events = self.events + event.rows
         self.column_count = len(event.rows[0]['values'])
-
-        if len(self.events) > 100 or now - self.last_flush_time > 60:
-            self.flush(event)
         self.last_binlog_file_name = file
         self.last_binlog_file_pos = pos
+        if len(self.events) > 100 or now - self.last_flush_time > 60:
+            self.flush(event)
 
     def flush(self,event):
         batch_event = FakeRows()
