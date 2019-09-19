@@ -227,7 +227,7 @@ def convert(data):
     if isinstance(data, dict):       return dict(map(convert, data.items()))
     if isinstance(data, tuple):      return tuple(map(convert, data))
     if isinstance(data, list):       return list(map(convert, data))
-    if isinstance(data, set):        return set(map(convert, data)
+    if isinstance(data, set):        return set(map(convert, data))
 
 if __name__ == '__main__':
     connection_settings = {
