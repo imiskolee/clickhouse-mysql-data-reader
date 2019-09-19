@@ -5,6 +5,7 @@ import logging
 import sys
 import traceback
 from datetime import datetime
+from datetime import timedelta
 import json
 
 from decimal import Decimal
@@ -173,7 +174,7 @@ class CHWriter(Writer):
                     if isinstance(row[key],dict):
                         row[key] = json.dumps(row[key])
 
-                    if isinstance(row[key],datetime.timedelta):
+                    if isinstance(row[key],timedelta):
                         row[key] = str(row[key])
 
                     logging.debug("row key {},type {}, value {}".format(key,type(row[key]),row[key]))
