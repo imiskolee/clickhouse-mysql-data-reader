@@ -21,6 +21,78 @@ table_schema_cache_time = {}
 last_binlog_pos = ''
 last_flush_time = 0
 
+class FakeRows:
+    rows = []
+    schema = None
+    table = None
+
+class CachePool():
+    caches = {}
+    last_full_check = 0
+    reader = None
+    def push_event(self,schema,table,rows,file,pos):
+        cache_key = "{}.{}".format(schema,table)
+        if cache_key not in self.caches:
+            c = EventCache()
+            c.schema = schema
+            c.table = table
+            c.reader = self.reader
+            self.caches[cache_key] = c
+        self.caches[cache_key].push_event(rows,file,pos)
+
+    def loop(self):
+        now = time.time()
+        if now - self.last_full_check > 60:
+            for k in self.caches:
+                c = self.caches[k]
+                if c.last_flush_time > 60 and len(c.events) > 0:
+                    c.flush({})
+            self.last_full_check = now
+
+
+class EventCache():
+    events = []
+    last_binlog_file_name = None
+    last_binlog_file_pos = 0
+    schema = None
+    table = None
+    column_count = None
+    last_flush_time = 0
+    reader = None
+
+    def push_event(self,event,file,pos):
+        now = time.time()
+        #if dismatched column,will syncing the cached data first
+        if self.column_count and self.column_count != len(event.rows[0]['values']) and len(self.events) > 0:
+            self.flush(event)
+            self.column_count = len(event.rows[0]['values'])
+
+        self.events = self.events + event.rows
+        self.column_count = len(event.rows[0]['values'])
+
+        if len(self.events) > 100 or now - self.last_flush_time > 60:
+            self.flush(event)
+        self.last_binlog_file_name = file
+        self.last_binlog_file_pos = pos
+
+    def flush(self,event):
+        batch_event = FakeRows()
+        batch_event.rows = self.events
+        event = Event()
+        event.schema = self.schema
+        event.table = self.table
+        event.pymysqlreplication_event = batch_event
+        event.fs = self.reader.get_field_schema_cache(self.schema,self.table)
+        self.reader.process_first_event(event=event)
+        self.reader.notify('WriteRowsEvent', event=event)
+        self.events = []
+        self.last_flush_time = time.time()
+
+        self.reader.process_binlog_position(self.last_binlog_file_name,self.last_binlog_file_pos)
+
+
+
+
 
 class MySQLReader(Reader):
     """Read data from MySQL as replication ls"""
@@ -41,6 +113,7 @@ class MySQLReader(Reader):
     write_rows_event_each_row_num = 0;
 
     binlog_position_file = None
+    cache_pool = None
 
     def __init__(
             self,
@@ -70,6 +143,8 @@ class MySQLReader(Reader):
         self.resume_stream = resume_stream
         self.nice_pause = nice_pause
         self.binlog_position_file=binlog_position_file
+        self.cache_pool = CachePool()
+        self.cache_pool.reader = self
 
         logging.info("raw dbs list. len()=%d", 0 if schemas is None else len(schemas))
         if schemas is not None:
@@ -270,7 +345,7 @@ class MySQLReader(Reader):
             fs = table_schema_cache[cache_key]
         return fs
 
-    def process_write_rows_event(self, mysql_event):
+    def process_write_rows_event(self, mysql_event,file,pos):
         """
         Process specific MySQL event - WriteRowsEvent
         :param mysql_event: WriteRowsEvent instance
@@ -283,6 +358,12 @@ class MySQLReader(Reader):
                 # this table is not listened
                 # processing is over - just skip event
                 return
+
+
+        self.cache_pool.push_event(mysql_event.schema,mysql_event.table,mysql_event,file,pos)
+
+        return
+
 
         fs = self.get_field_schema_cache(mysql_event.schema,mysql_event.table)
 
@@ -327,7 +408,7 @@ class MySQLReader(Reader):
 
         self.stat_write_rows_event_finalyse()
 
-    def process_update_rows_event(self, mysql_event):
+    def process_update_rows_event(self, mysql_event,file,pos):
         if self.tables_prefixes:
             # we have prefixes specified
             # need to find whether current event is produced by table in 'looking-into-tables' list
@@ -337,6 +418,12 @@ class MySQLReader(Reader):
                 return
         for row in mysql_event.rows:
             row["values"] = row["after_values"]
+
+        self.cache_pool.push_event(mysql_event.schema,mysql_event.table,mysql_event,file,pos)
+
+        return
+
+
         # statistics
         self.stat_write_rows_event_calc_rows_num_min_max(rows_num_per_event=len(mysql_event.rows))
 
@@ -389,7 +476,12 @@ class MySQLReader(Reader):
     def process_binlog_position(self, file, pos):
         global last_binlog_pos
         global last_flush_time
-        last_binlog_pos = "{}:{}".format(file, pos)
+        new_binlog_pos = "{}:{}".format(file, pos)
+        if last_binlog_pos and new_binlog_pos < last_binlog_pos:
+            last_binlog_pos = new_binlog_pos
+        else:
+            logging.info("skip process binlog position: stored: {},new: {}".format(last_binlog_pos,new_binlog_pos))
+            return
         now = time.time()
         if self.binlog_position_file and now - last_flush_time > 10:
             with open(self.binlog_position_file, "w") as f:
@@ -406,6 +498,7 @@ class MySQLReader(Reader):
         try:
             while True:
                 logging.debug('Check events in binlog stream')
+                self.cache_pool.loop()
 
                 self.init_fetch_loop()
 
@@ -420,17 +513,17 @@ class MySQLReader(Reader):
 
                         # process event based on its type
                         if isinstance(mysql_event, WriteRowsEvent):
-                            self.process_write_rows_event(mysql_event)
+                            self.process_write_rows_event(mysql_event,self.binlog_stream.log_file, self.binlog_stream.log_pos)
                         elif isinstance(mysql_event, DeleteRowsEvent):
                             self.process_delete_rows_event(mysql_event)
                         elif isinstance(mysql_event, UpdateRowsEvent):
-                            self.process_update_rows_event(mysql_event)
+                            self.process_update_rows_event(mysql_event,self.binlog_stream.log_file, self.binlog_stream.log_pos)
                         else:
                             # skip other unhandled events
                             pass
 
                         # after event processed, we need to handle current binlog position
-                        self.process_binlog_position(self.binlog_stream.log_file, self.binlog_stream.log_pos)
+                       # self.process_binlog_position(self.binlog_stream.log_file, self.binlog_stream.log_pos)
 
                 except KeyboardInterrupt:
                     # pass SIGINT further
