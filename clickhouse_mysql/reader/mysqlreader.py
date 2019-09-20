@@ -75,7 +75,7 @@ class EventCache():
             self.flush(event)
 
     def flush(self,event):
-        logging.info("start flush schema:{} table:{} rows:{}",self.schema,self.table,len(self.events))
+        logging.info("start flush schema:{} table:{} rows:{}".format(self.schema,self.table,len(self.events)))
         batch_event = FakeRows()
         batch_event.rows = self.events
         event = Event()
